@@ -1,0 +1,23 @@
+{
+  "name": "OMR 답안지 웹앱",
+  "short_name": "OMR 채점",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#1f2937",
+  "description": "시험 시간 관리와 OMR 채점을 위한 웹앱",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

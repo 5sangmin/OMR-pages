@@ -792,6 +792,18 @@
     }
 
   </style>
+
+ <link rel="manifest" href="./manifest.webmanifest">
+ <meta name="theme-color" content="#1f2937">
+ <script>
+   if ("serviceWorker" in navigator) {
+     window.addEventListener("load", () => {
+       navigator.serviceWorker
+         .register("./sw.js")
+         .catch((err) => console.error("SW registration failed", err));
+     });
+   }
+ </script>
 </head>
 <body>
   <main class="omr-app">
