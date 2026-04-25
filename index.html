@@ -975,12 +975,17 @@
     const timerMeta = document.getElementById('timerMeta');
     const startStopTimerBtn = document.getElementById('startStopTimerBtn');
     const resetTimerBtn = document.getElementById('resetTimerBtn');
+    const toggleAnalysisBtn = document.getElementById('toggleAnalysisBtn');
+    const analysisPanel = document.getElementById('analysisPanel');
     const toggleScoreRuleBtn = document.getElementById('toggleScoreRuleBtn');
     const scoreRulePanel = document.getElementById('scoreRulePanel');
     const scorePerCorrect = document.getElementById('scorePerCorrect');
     const penaltyPerWrong = document.getElementById('penaltyPerWrong');
     const scoreFormulaText = document.getElementById('scoreFormulaText');
     const sheetShortcutBtn = document.getElementById('sheetShortcutBtn');
+    const avgTimeText = document.getElementById('avgTimeText');
+    const elapsedTimeText = document.getElementById('elapsedTimeText');
+    const timeAnalysisList = document.getElementById('timeAnalysisList');
 
     let timerInterval = null;
     let timerStartedAt = null;
@@ -988,6 +993,8 @@
     let timerDurationSeconds = 30 * 60;
     let timerRunning = false;
     let answersLocked = false;
+    let questionTimeMs = Array(totalQuestions).fill(0);
+    let lastAnswerTimestamp = null;
 
     function isPracticeMode() {
       return currentMode === 'practice';
@@ -1005,6 +1012,63 @@
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = totalSeconds % 60;
       return `${String(minutes).padStart(2, '0')}분 ${String(seconds).padStart(2, '0')}초`;
+    }
+
+
+    function formatAnalysisDuration(ms) {
+      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${minutes}분 ${String(seconds).padStart(2, '0')}초`;
+    }
+
+    function renderTimeAnalysis() {
+      if (!avgTimeText || !elapsedTimeText || !timeAnalysisList) return;
+      const totalMs = questionTimeMs.reduce((sum, value) => sum + value, 0);
+      const measured = questionTimeMs.filter(value => value > 0);
+      avgTimeText.textContent = measured.length
+        ? `문항당 평균 소요 시간: ${formatAnalysisDuration(totalMs / measured.length)}`
+        : '문항당 평균 소요 시간: 없음';
+      elapsedTimeText.textContent = totalMs > 0
+        ? `총 경과 시간: ${formatAnalysisDuration(totalMs)}`
+        : '총 경과 시간: 없음';
+
+      timeAnalysisList.innerHTML = '';
+      questionTimeMs
+        .map((ms, index) => ({ no: index + 1, ms }))
+        .filter(item => item.ms > 0)
+        .sort((a, b) => b.ms - a.ms)
+        .forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'analysis-item';
+          const label = document.createElement('span');
+          label.textContent = `${item.no}번 문항`;
+          const value = document.createElement('strong');
+          value.textContent = formatAnalysisDuration(item.ms);
+          row.appendChild(label);
+          row.appendChild(value);
+          timeAnalysisList.appendChild(row);
+        });
+    }
+
+    function resetTimeAnalysis() {
+      questionTimeMs = Array(totalQuestions).fill(0);
+      lastAnswerTimestamp = null;
+      renderTimeAnalysis();
+    }
+
+    function recordAnswerTiming(questionIndex) {
+      if (!timerRunning) return;
+      const now = Date.now();
+      if (lastAnswerTimestamp === null) {
+        lastAnswerTimestamp = now;
+        renderTimeAnalysis();
+        return;
+      }
+      const delta = Math.max(0, now - lastAnswerTimestamp);
+      questionTimeMs[questionIndex] = (questionTimeMs[questionIndex] || 0) + delta;
+      lastAnswerTimestamp = now;
+      renderTimeAnalysis();
     }
 
     function getElapsedMs() {
@@ -1031,10 +1095,12 @@
       setAnswerLockState(false);
       timerRunning = true;
       timerStartedAt = Date.now();
+      lastAnswerTimestamp = Date.now();
       if (timerInterval) clearInterval(timerInterval);
       timerInterval = setInterval(renderTimer, 200);
       renderGrid();
       renderTimer();
+      renderTimeAnalysis();
     }
 
     function stopTimer() {
@@ -1042,6 +1108,7 @@
       timerElapsedMs = getElapsedMs();
       timerRunning = false;
       timerStartedAt = null;
+      lastAnswerTimestamp = null;
       if (timerInterval) {
         clearInterval(timerInterval);
         timerInterval = null;
@@ -1049,6 +1116,7 @@
       setAnswerLockState(true);
       renderGrid();
       renderTimer();
+      renderTimeAnalysis();
     }
 
     function resetTimer() {
@@ -1060,8 +1128,16 @@
         timerInterval = null;
       }
       setAnswerLockState(false);
+      closeAnalysisPanel();
+      resetTimeAnalysis();
       renderGrid();
       renderTimer();
+    }
+
+    function closeAnalysisPanel() {
+      if (!analysisPanel || !toggleAnalysisBtn) return;
+      analysisPanel.classList.add('hidden');
+      toggleAnalysisBtn.setAttribute('aria-expanded', 'false');
     }
 
     function updateModeText() {
@@ -1161,6 +1237,7 @@
             }
             btn.addEventListener('click', () => {
               if (!canEditAnswers()) return;
+              recordAnswerTiming(index);
               answers[index] = answers[index] === choice ? null : choice;
               updateMarkedCount();
               renderGrid();
@@ -1244,6 +1321,7 @@
       resultCard.classList.add('hidden');
       wrongList.innerHTML = '';
       renderGrid();
+      renderTimeAnalysis();
     }
 
     function syncQuestionCountUI() {
@@ -1256,6 +1334,8 @@
       totalQuestions = next;
       answers = Array(totalQuestions).fill(null);
       correctAnswers = Array(totalQuestions).fill(null);
+      questionTimeMs = Array(totalQuestions).fill(0);
+      lastAnswerTimestamp = null;
       gradingResult = null;
       resetTimer();
       syncQuestionCountUI();
@@ -1303,12 +1383,14 @@
     examModeBtn && examModeBtn.addEventListener('click', () => {
       currentMode = 'exam';
       resetTimer();
+      closeAnalysisPanel();
       updateModeText();
     });
 
     practiceModeBtn && practiceModeBtn.addEventListener('click', () => {
       currentMode = 'practice';
       resetTimer();
+      closeAnalysisPanel();
       updateModeText();
     });
 
@@ -1318,6 +1400,12 @@
     });
 
     resetTimerBtn && resetTimerBtn.addEventListener('click', resetTimer);
+    toggleAnalysisBtn && toggleAnalysisBtn.addEventListener('click', () => {
+      if (!analysisPanel) return;
+      const willOpen = analysisPanel.classList.contains('hidden');
+      analysisPanel.classList.toggle('hidden');
+      toggleAnalysisBtn.setAttribute('aria-expanded', String(willOpen));
+    });
     scorePerCorrect && scorePerCorrect.addEventListener('input', updateScoreFormulaText);
     penaltyPerWrong && penaltyPerWrong.addEventListener('input', updateScoreFormulaText);
 
@@ -1327,6 +1415,7 @@
     setAnswerLockState(false);
     renderGrid();
     renderTimer();
+    renderTimeAnalysis();
 
   </script>
 </body>
