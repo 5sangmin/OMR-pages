@@ -144,7 +144,7 @@
       font-size: 0.9rem;
     }
 
-    .number-input { width: 78px; }
+    .number-input { width: 62px; }
     .time-input { width: 82px; }
 
     .btn {
@@ -653,10 +653,37 @@
     }
 
     .choice-btn.correct {
-      box-shadow: inset 0 0 0 2px var(--right-ring), 0 0 0 1px rgba(22,108,176,0.06);
+      background: #e8f0ff;
+      border-color: rgba(35, 63, 176, 0.60);
+      color: #1f3fb0;
+      box-shadow: inset 0 0 0 2px rgba(35, 63, 176, 0.18);
     }
+
     .choice-btn.wrong {
-      box-shadow: inset 0 0 0 2px var(--wrong-ring), 0 0 0 1px rgba(200,92,92,0.04);
+      background: #ffe1e1;
+      border-color: rgba(190, 35, 35, 0.75);
+      color: #a01818;
+      box-shadow: inset 0 0 0 2px rgba(190, 35, 35, 0.15);
+    }
+
+    .choice-btn.correct-answer {
+      background: #e2f4de;
+      border-color: rgba(67, 122, 34, 0.82);
+      color: #245b10;
+      box-shadow: inset 0 0 0 2px rgba(67, 122, 34, 0.16);
+    }
+
+    .choice-btn.user-wrong {
+      background: #ffd8d8;
+      border-color: rgba(190, 35, 35, 0.88);
+      color: #941515;
+      box-shadow: inset 0 0 0 2px rgba(190, 35, 35, 0.18);
+    }
+
+    .sheet-card.locked .choice-btn:not(.active):not(.correct):not(.wrong):not(.correct-answer):not(.user-wrong) {
+      background: #eef1f5;
+      border-color: rgba(90, 96, 108, 0.20);
+      color: #7a8392;
     }
 
     .footer-bar {
@@ -792,18 +819,6 @@
     }
 
   </style>
-
- <link rel="manifest" href="./manifest.webmanifest">
- <meta name="theme-color" content="#1f2937">
- <script>
-   if ("serviceWorker" in navigator) {
-     window.addEventListener("load", () => {
-       navigator.serviceWorker
-         .register("./sw.js")
-         .catch((err) => console.error("SW registration failed", err));
-     });
-   }
- </script>
 </head>
 <body>
   <main class="omr-app">
@@ -846,7 +861,7 @@
         </div>
       </div>
 
-      <div class="card" id="sheetCard">
+      <div class="card sheet-card" id="sheetCard">
         <div class="control-row" style="justify-content: space-between; margin-bottom: 0.65rem; align-items: flex-start;">
           <h2 style="margin:0;">OMR 답안지</h2>
           <div class="control-row" style="width:auto; justify-content:flex-end; gap: 0.4rem;">
@@ -922,6 +937,7 @@
     let currentMode = 'exam';
 
     const answerGrid = document.getElementById('answerGrid');
+    const sheetCard = document.getElementById('sheetCard');
     const markedCount = document.getElementById('markedCount');
     const totalQuestionsInput = document.getElementById('questionCountInput');
     const applyQuestionCountBtn = document.getElementById('applyQuestionCountBtn');
@@ -960,6 +976,7 @@
     let timerElapsedMs = 0;
     let timerDurationSeconds = 30 * 60;
     let timerRunning = false;
+    let answersLocked = false;
 
     function isPracticeMode() {
       return currentMode === 'practice';
@@ -1000,10 +1017,12 @@
 
     function startTimer() {
       if (timerRunning) return;
+      setAnswerLockState(false);
       timerRunning = true;
       timerStartedAt = Date.now();
       if (timerInterval) clearInterval(timerInterval);
       timerInterval = setInterval(renderTimer, 200);
+      renderGrid();
       renderTimer();
     }
 
@@ -1016,6 +1035,8 @@
         clearInterval(timerInterval);
         timerInterval = null;
       }
+      setAnswerLockState(true);
+      renderGrid();
       renderTimer();
     }
 
@@ -1027,6 +1048,8 @@
         clearInterval(timerInterval);
         timerInterval = null;
       }
+      setAnswerLockState(false);
+      renderGrid();
       renderTimer();
     }
 
@@ -1080,8 +1103,13 @@
       answerGrid.style.setProperty('--column-count-sm', responsive.sm);
     }
 
+    function setAnswerLockState(locked) {
+      answersLocked = !!locked;
+      if (sheetCard) sheetCard.classList.toggle('locked', answersLocked);
+    }
+
     function canEditAnswers() {
-      return !gradingResult;
+      return !gradingResult && !answersLocked;
     }
 
     function updateMarkedCount() {
@@ -1113,8 +1141,12 @@
             btn.disabled = !canEditAnswers();
             if (selected === choice) btn.classList.add('active');
             if (gradingResult && correctAnswers[index] != null) {
-              if (choice === correctAnswers[index]) btn.classList.add('correct');
-              if (selected === choice && selected !== correctAnswers[index]) btn.classList.add('wrong');
+              if (selected === correctAnswers[index] && choice === correctAnswers[index]) {
+                btn.classList.add('correct');
+              } else {
+                if (selected === choice && selected !== correctAnswers[index]) btn.classList.add('wrong', 'user-wrong');
+                if (choice === correctAnswers[index]) btn.classList.add('correct-answer');
+              }
             }
             btn.addEventListener('click', () => {
               if (!canEditAnswers()) return;
@@ -1281,6 +1313,7 @@
     syncQuestionCountUI();
     updateModeText();
     updateScoreFormulaText();
+    setAnswerLockState(false);
     renderGrid();
     renderTimer();
 
