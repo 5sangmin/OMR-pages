@@ -1,13 +1,13 @@
 {
-  "name": "OMR 답안지 웹앱",
-  "short_name": "OMR 채점",
+  "name": "OMR Answer Sheet",
+  "short_name": "OMR Timer"
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#1428A0",
   "theme_color": "#1428A0",
-  "description": "시험 시간 관리와 OMR 채점을 위한 웹앱",
+  "description": "description": "A web app for exam time management and OMR grading",
   "icons": [
     {
       "src": "./icons/icon-192.png",
