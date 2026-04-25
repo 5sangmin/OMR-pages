@@ -7,7 +7,7 @@
   "orientation": "portrait",
   "background_color": "#1428A0",
   "theme_color": "#1428A0",
-  "description": "description": "A web app for exam time management and OMR grading",
+  "description": "A web app for exam time management and OMR grading",
   "icons": [
     {
       "src": "./icons/icon-192.png",
