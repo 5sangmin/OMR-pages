@@ -1,3 +1,5 @@
+🌐 Language: [한국어](./README.md) | [English](./README.en.md)
+
 # OMR Answer Sheet
 
 브라우저에서 바로 사용할 수 있는 **OMR(객관식 답안지) 웹앱**입니다.  
